@@ -1,0 +1,284 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(ggrepel)
+library(moderndive)
+```
+
+#See the structure of the YC dataset
+```{r}
+yc<-read.csv("YC Plus.csv")
+```
+#Now let's explore YC data in terms of geography, first we need to separate location in separate columns (city, country, continent)
+
+```{r}
+str(yc)
+```
+
+```{r}
+yc<-yc%>%
+ separate(Location, c("City", "State", "Country", "Continent"), ", ")
+yc
+```
+
+```{r}
+yc%>%
+  group_by(Country)%>%
+  summarise(n=n())%>%
+  arrange(desc(n))
+```
+
+```{r}
+yc<-yc%>%
+  mutate(USD_Pre_Val_in_mils = Pre.Money.Valuation.Currency..in.USD./1000000)%>%
+  mutate(USD_Raised_in_mils = Money.Raised.Currency..in.USD./1000000)%>%
+  mutate(USD_Total.Funding_in_mils = Total.Funding.Amount.Currency..in.USD./1000000)%>%
+  mutate(Percentage.Raised2Total.Funding = USD_Raised_in_mils/USD_Total.Funding_in_mils*100)%>%
+  mutate(Percentage.Raised2Pre_Val = USD_Raised_in_mils/USD_Pre_Val_in_mils*100)%>%
+  group_by(Country)%>%
+  arrange(desc(USD_Raised_in_mils))
+```
+
+```{r}
+str(yc)
+```
+
+
+```{r}
+ggplot(yc, aes(x = Continent, y=Money.Raised.Currency..in.USD.))+
+  geom_boxplot()+
+  scale_y_log10()
+#Add color and labels
+```
+
+
+```{r}
+yc_in_us<-
+  subset(yc, Country=="United States")%>%
+  group_by(City)%>%
+  summarise(n=n())%>%
+  arrange(desc(n))
+yc_in_us
+```
+
+#Now let's explore YC data and money raised
+```{r}
+ggplot(yc, aes(Number.of.Investors, USD_Raised_in_mils, size=Number.of.Partner.Investors, color = Continent)) + geom_point()+scale_x_log10() + scale_y_log10() 
+#ggplot(Vocab, aes(x = education, y = vocabulary)) +
+ # geom_jitter(alpha = 0.25) +
+  # Add a quantile stat, at 0.05, 0.5, and 0.95
+  #stat_quantile(quantiles = c(0.05, 0.5, 0.95))
+```
+#Well Well Well. Seems that not all Unicorns are made the same
+#btw, put those money in billion, change axis? boxplot or violin plot for money raised v. funding type?
+#group by continent? linear regression for a train and test so that you put those coefficients in the other dataset?
+#what about this? Which yc became unicorn v. those who are still not unicorn? chances are to identify and capture an Alicorn we might need to call Prof. Oak for this
+```{r}
+ggplot(yc, aes(Number.of.Funding.Rounds,USD_Raised_in_mils, size=Percentage.Raised2Total.Funding, color = Continent)) + geom_point()+ scale_y_log10()
+```
+
+#HOLD ON. Wait a second. That Southamerican point has a story behind. Find out why it looks like an outlier
+
+```{r}
+yc_en_sudamerica<-subset(yc, Continent=="South America")%>%
+  group_by(State)%>%
+  head(n=10)
+ggplot(yc_en_sudamerica, aes(Number.of.Funding.Rounds,USD_Raised_in_mils, size=Percentage.Raised2Total.Funding, color= Funding.Type, label = Name)) + geom_point()+ scale_y_log10() + geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+```
+#OH. So companies apply more than one time like little entittled Kovi. Find out those so called american startups
+
+```{r}
+yc_pal_norte <-subset(yc, Continent=="North America")%>%
+                        group_by(State)%>%
+                        head(n=10) 
+ggplot(yc_pal_norte, aes(Number.of.Funding.Rounds,USD_Total.Funding_in_mils, size=Percentage.Raised2Total.Funding, color= Funding.Type, label = Name)) + geom_point() +scale_y_log10()+ geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+
+```
+#FASCINATING! In Sudamerica they ask for SEED money whereas in USA they ask for 'Series E'
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+yc_europe <-subset(yc, Continent=="Europe")%>%
+                        group_by(State)%>%
+                        head(n=10) 
+ggplot(yc_europe, aes(Number.of.Funding.Rounds,USD_Total.Funding_in_mils, size=Percentage.Raised2Total.Funding, color= Funding.Type, label = Name)) + geom_point() +scale_y_log10()+ geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+```
+
+
+```{r}
+yc_asia <-subset(yc, Continent=="Asia")%>%
+                        group_by(State)%>%
+                        head(n=10) 
+ggplot(yc_asia, aes(Number.of.Funding.Rounds,USD_Total.Funding_in_mils, size=Percentage.Raised2Total.Funding, color= Funding.Type, label = Name)) + geom_point() +scale_y_log10()+ geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+```
+
+
+```{r}
+yc_africa <-subset(yc, Continent=="Africa")%>%
+                        group_by(State)%>%
+                        head(n=10) 
+ggplot(yc_africa, aes(Number.of.Funding.Rounds,USD_Total.Funding_in_mils, size=Percentage.Raised2Total.Funding, color= Funding.Type, label = Name)) + geom_point() +scale_y_log10()+ geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+```
+
+
+# Now let's explore the average transition in categories
+
+
+```{r}
+unis <-yc%>%
+  group_by(Name)%>%
+  filter(Counts==1)
+str(unis)
+ggplot(unis, aes(Number.of.Investors, USD_Raised_in_mils, size=Number.of.Partner.Investors, color = Continent)) +geom_point()+ scale_x_log10() + scale_y_log10()
+ggplot(unis, aes(Years_Transition_Unicorn, USD_Raised_in_mils,  color = Categories,   size = Continent)) + geom_point() +scale_y_log10()
+```
+
+```{r}
+#modelbin3 <- glm(Unicorn  ~ Continent + Revenue + Status + Industry + Valuation + avg_Years_Transition_Unicorn, family = "binomial", data = unis)
+#summary(modelbin3)
+set.seed(88)
+yc_shuffled1 <- yc %>%
+  sample_frac(size=1, replace=FALSE)
+yc_train1<-yc_shuffled1 %>%
+  slice(1:1500)
+yc_test1<- yc_shuffled1 %>%
+  slice(1501:nrow(yc_shuffled1))
+```
+
+```{r}
+modelbin3 <- glm(Unicorn_Bin  ~  Revenue.Range + Funding.Status + Number.of.Funding.Rounds + Total.Funding.Amount.Currency..in.USD., family = "binomial", data = yc_train1)
+summary(modelbin3)
+```
+
+
+```{r}
+modelbin3a <- lm(Unicorn_Bin  ~  Revenue.Range + Funding.Status + Number.of.Funding.Rounds + Total.Funding.Amount.Currency..in.USD., family = "binomial", data = yc_train1)
+summary(modelbin3a)
+get_regression_table(modelbin3a)
+```
+
+```{r}
+unis_top_20<-unis %>%
+  group_by(Name)%>%
+  arrange(desc(Total.Funding.Amount.Currency..in.USD.)) %>%
+  head(n=20)
+unis_top_20
+ggplot(unis_top_20, aes(Years_Transition_Unicorn,Total.Funding.Amount.Currency..in.USD., color = Categories, label = Name)) + geom_point()+scale_y_log10()+ geom_label_repel(min.segment.length = 0.1, max.overlaps = Inf, label.size = 0.1, label.padding = 0.1, label.r = 0)
+```
+
+```{r}
+model_1<- lm(Number.of.Funding.Rounds~USD_Total.Funding_in_mils, data= yc)
+get_regression_table(model_1)
+get_regression_points(model_1) %>%
+summarize(r_squared= 1-var(model_1$residual)/ var(yc$Number.of.Funding.Rounds))
+```
+#Impressive. Very impressive. Let's see Paul Allen's model_1a
+
+```{r}
+ymca <-yc%>%
+  group_by(Continent)%>%
+  summarize(avg_value = mean(USD_Total.Funding_in_mils), n=n())%>%
+  arrange(desc(avg_value))
+ymca$Continent <-factor(ymca$Continent)
+
+
+
+model_1a <-lm(Number.of.Funding.Rounds~USD_Total.Funding_in_mils + Continent , data= yc)
+get_regression_table(model_1a)
+get_regression_points(model_1a)%>%
+summarize(r_squared= 1-var(model_1a$residual)/ var(yc$Number.of.Funding.Rounds))
+```
+#This reminds me of Star Wolf ,,you good but I'm betta." Let's do a train 'n test to salvage data
+```{r}
+set.seed(88)
+yc_shuffled <- yc %>%
+  sample_frac(size=1, replace=FALSE)
+yc_train<-yc_shuffled %>%
+  slice(1:2000)
+yc_test<- yc_shuffled %>%
+  slice(2001:nrow(yc_shuffled))
+train_model1<- lm(Number.of.Funding.Rounds~USD_Total.Funding_in_mils + Continent , data= yc_train)
+get_regression_table(train_model1)
+get_regression_points(train_model1, newdata=yc_test)%>%
+  summarize(r_squared= 1-var(train_model1$residual)/ var(yc$Number.of.Funding.Rounds))
+```
+#Subarashii. That would do it nicely, amirite?
+#In reality, r here is 0.0796, being this one smaller than previous r of 8.39% and 8.25%. Hence, it is over-fitted, yes or yes?
+
+#Well Well Well. Seems that not all Unicorns are made the same
+#btw, put those money in billion, change axis? boxplot or violin plot for money raised v. funding type?
+#group by continent? linear regression for a train and test so that you put those coefficients in the other dataset?
+#what about this? Which yc became unicorn v. those who are still not unicorn? chances are to identify and capture an Alicorn we might need to call Prof. Oak for this
+
+
+```{r}
+ggplot(unis, aes(x = Continent, y=Money.Raised.Currency..in.USD.))+
+  geom_boxplot()+
+  scale_y_log10()
+```
+
+# Now let's explore YC data in terms of Categories, first we need to separate Categories in separate columns 
+```{r}
+yc_by_Categories <- yc %>% 
+  select(Money.Raised.Currency..in.USD., Categories)
+yc_by_Categories<-separate_rows(yc_by_Categories,Categories,sep = ", ")
+Clean_yc_by_Categories<-aggregate(Money.Raised.Currency..in.USD.~ Categories, yc_by_Categories, sum)
+Clean_yc_by_Categories
+```
+# Now let's explore top 10 popular industries with most fundings and visualise it
+```{r}
+Clean_yc_by_Categories%>%
+  arrange(desc(Money.Raised.Currency..in.USD.))
+top_10_indsutires<-top_n(Clean_yc_by_Categories,n=20)
+top_10_indsutires%>%
+  arrange(desc(top_10_indsutires))
+ggplot(top_10_indsutires,aes(Money.Raised.Currency..in.USD., color = Categories))+geom_histogram()+ scale_x_log10()
+
+```
+
+# Now let's explore top 20 popular industries without fundings 
+```{r}
+Clean_yc_by_Categories%>%
+  arrange(desc(Money.Raised.Currency..in.USD.))
+bottom_10_indsutires<-tail(Clean_yc_by_Categories,n=20)
+bottom_10_indsutires%>%
+  arrange(desc(bottom_10_indsutires))
+ggplot(bottom_10_indsutires,aes(Money.Raised.Currency..in.USD., color = Categories))+geom_histogram()+ scale_x_log10()
+```
+
+```{r}
+modelbin1 <- glm(Unicorn_Bin ~ Number.of.Funding.Rounds + Funding.Stage + Continent + Revenue.Range   + Funding.Status , family = "binomial", data = yc)
+summary(modelbin1)
+```
+
+```{r}
+
+modelbin2 <- glm(Unicorn_Bin ~ Continent + Revenue.Range+ Funding.Status, family = "binomial", data = yc)
+summary(modelbin2)
+```
+
+```{r}
+ggplot(unis, aes(Money.Raised.Currency..in.USD., fill = Funding.Type)) + geom_histogram()+scale_x_log10()+ scale_y_log10()
+ggplot(yc, aes(Money.Raised.Currency..in.USD., fill = Funding.Type)) + geom_histogram()+ scale_x_log10()+scale_y_log10()
+```
+
